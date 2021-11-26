@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.5" tiledversion="1.7.1" name="32x32_map_tile" tilewidth="32" tileheight="32" tilecount="667" columns="23">
+<tileset version="1.5" tiledversion="1.7.2" name="32x32_map_tile" tilewidth="32" tileheight="32" tilecount="667" columns="23">
  <image source="32x32_map_tile.png" width="736" height="928"/>
  <tile id="23">
   <objectgroup draworder="index" id="2">
@@ -27,7 +27,10 @@
    <object id="1" type="collision" x="0" y="0" width="4" height="32"/>
   </objectgroup>
  </tile>
- <tile id="48">
+ <tile id="48" type="grass">
+  <properties>
+   <property name="name" value="grass:collisionRight"/>
+  </properties>
   <objectgroup draworder="index" id="2">
    <object id="1" type="collision" x="28" y="0" width="4" height="32"/>
   </objectgroup>
@@ -367,6 +370,11 @@
  <tile id="200" type="collision"/>
  <tile id="201" type="collision"/>
  <tile id="202" type="collision"/>
+ <tile id="205">
+  <properties>
+   <property name="name" value="sign:inn:hangLeft"/>
+  </properties>
+ </tile>
  <tile id="207">
   <objectgroup draworder="index" id="2">
    <object id="3" type="collision" x="5" y="9" width="23" height="13"/>

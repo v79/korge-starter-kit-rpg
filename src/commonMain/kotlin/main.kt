@@ -56,8 +56,8 @@ class RpgIngameScene : Scene() {
         val sw = Stopwatch().start()
 
         println("start resources loading...")
-//BasicTilemap/untitled.tmx     MiniTileset-Dungeon/dungeon.tmx
-        tilemap = resourcesVfs["Texture/basic.tmx"].readTiledMap(atlas = atlas)
+//BasicTilemap/untitled.tmx     MiniTileset-Dungeon/dungeon.tmx     Texture/basic.tmx
+        tilemap = resourcesVfs["BasicTilemap/untitled.tmx"].readTiledMap(atlas = atlas)
         characters = resourcesVfs["vampire.ase"].readImageDataContainer(ASE, atlas = atlas)
 
         println("loaded resources in ${sw.elapsed}")
@@ -90,6 +90,7 @@ class RpgIngameScene : Scene() {
                 for (obj in tiledMapView.tiledMap.data.objectLayers.objects) {
                     println("- obj = $obj")
                 }
+
                 println(tiledMapView.firstDescendantWith { it.getPropString("type") == "start" })
                 val startPos = tiledMapView["start"].firstOrNull?.pos ?: Point(50, 50)
                 val charactersLayer = tiledMapView["characters"].first as Container
@@ -158,8 +159,8 @@ fun Stage.controlWithKeyboard(
     addUpdater { dt ->
 
         // 32f being the tile grid size
-        val charGridX = ((char.x / 32f) - 1).roundToInt()
-        val charGridY = ((char.y / 32f) - 1).roundToInt()
+        val charGridX = (((char.x + (char.width / 2f)) / 32f) - 1).roundToInt()
+        val charGridY = (((char.y + (char.height / 2f)) / 32f) - 1).roundToInt() // want position at feet
 
         val speed = 2.0 * (dt / 16.0.milliseconds)
         var dx = 0.0
@@ -207,12 +208,18 @@ fun Stage.controlWithKeyboard(
         }
 
         // there's a coordinate problem here I need to solve
+        // this only returns the ID of the tile used, which doesn't say much at all
         val pressingInfo = keys[Key.I]
         if(pressingInfo) {
             val characterPos = char.pos
             println("Tile at [${characterPos.x},${characterPos.y}]")
-            val currentTile = tiledMapView.tiledMap.data.tileLayers.first()[charGridX,charGridY]
-            println("Tile at [${characterPos.x},${characterPos.y}] is: $currentTile")
+            if(charGridX >= 0 && charGridX >=0) {
+                for(layer in tiledMapView.tiledMap.data.tileLayers) {
+                    val currentTile = layer[charGridX,charGridY]
+                    println("Tile at [${characterPos.x},${characterPos.y}] for layer ${layer.id}(${layer.name}) is: $currentTile")
+                    println(tiledMapView.tiledMap.tilesets[0].data.tiles[currentTile].type)
+                }
+            }
         }
 
     }
