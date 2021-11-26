@@ -1,37 +1,29 @@
-import com.soywiz.klock.Stopwatch
 import com.soywiz.klock.milliseconds
 import com.soywiz.klock.seconds
 import com.soywiz.korev.Key
 import com.soywiz.korge.Korge
-import com.soywiz.korge.component.docking.keepChildrenSortedByY
-import com.soywiz.korge.input.keys
-import com.soywiz.korge.scene.MaskTransition
-import com.soywiz.korge.scene.Scene
-import com.soywiz.korge.scene.sceneContainer
+import com.soywiz.korge.scene.*
 import com.soywiz.korge.tiled.*
 import com.soywiz.korge.ui.UIText
-import com.soywiz.korge.ui.textAlignment
-import com.soywiz.korge.ui.uiText
 import com.soywiz.korge.view.*
 import com.soywiz.korge.view.animation.ImageDataView
-import com.soywiz.korge.view.animation.imageDataView
-import com.soywiz.korge.view.camera.cameraContainer
-import com.soywiz.korge.view.filter.IdentityFilter
 import com.soywiz.korge.view.filter.TransitionFilter
-import com.soywiz.korim.atlas.MutableAtlasUnit
-import com.soywiz.korim.color.Colors
-import com.soywiz.korim.format.ASE
-import com.soywiz.korim.format.ImageDataContainer
-import com.soywiz.korim.format.readImageDataContainer
-import com.soywiz.korio.dynamic.dyn
-import com.soywiz.korio.file.std.resourcesVfs
+import com.soywiz.korinject.AsyncInjector
+import com.soywiz.korio.async.launchImmediately
 import com.soywiz.korma.geom.Point
+import com.soywiz.korma.geom.Rectangle
+import com.soywiz.korma.geom.SizeInt
 import kotlin.math.roundToInt
+import kotlin.reflect.KClass
 
-suspend fun main() =
+suspend fun main() = Korge(Korge.Config(module = MyModule))
+
+/* suspend fun main() =
     Korge(width = 800, height = 600, virtualWidth = 512, virtualHeight = 512, bgcolor = Colors["#2b2b2b"]) {
-        injector.mapPrototype { RpgIngameScene() }
 
+
+
+    injector.mapPrototype { RpgIngameScene() }
         val rootSceneContainer = sceneContainer()
 
         rootSceneContainer.changeTo<RpgIngameScene>(
@@ -45,96 +37,20 @@ suspend fun main() =
             time = 1.0.seconds
         )
     }
+*/
 
-class RpgIngameScene : Scene() {
-    val atlas = MutableAtlasUnit(2048, 2048)
-    lateinit var tilemap: TiledMap
-    lateinit var characters: ImageDataContainer
-
-    override suspend fun Container.sceneInit() {
-
-        val sw = Stopwatch().start()
-
-        println("start resources loading...")
-//BasicTilemap/untitled.tmx     MiniTileset-Dungeon/dungeon.tmx     Texture/basic.tmx
-        tilemap = resourcesVfs["BasicTilemap/untitled.tmx"].readTiledMap(atlas = atlas)
-        characters = resourcesVfs["vampire.ase"].readImageDataContainer(ASE, atlas = atlas)
-
-        println("loaded resources in ${sw.elapsed}")
-    }
-
-    override suspend fun Container.sceneMain() {
-        container {
-            scale(2.0)
-
-            lateinit var player: ImageDataView
-            lateinit var tiledMapView: TiledMapView
-            val npcsMap = mutableMapOf<String, NPC>()
-
-            val cameraContainer = cameraContainer(
-                256.0, 256.0, clip = true,
-                block = {
-                    clampToBounds = true
-                }
-            ) {
-                tiledMapView = tiledMapView(tilemap, smoothing = false, showShapes = false)
-                tiledMapView.filter = IdentityFilter(false)
-
-                // error is thrown if this is null, because we don't know where to place the player
-                println("tiledMapView[\"start\"]=${tiledMapView["start"].firstOrNull}")
-                /*val npcs: List<TiledMap.Object> = tiledMapView.tiledMap.data.getObjectByType("npc")
-                for(npc in npcs) {
-                    println("- npc = $npc")
-                }*/
-
-                for (obj in tiledMapView.tiledMap.data.objectLayers.objects) {
-                    println("- obj = $obj")
-                }
-
-                println(tiledMapView.firstDescendantWith { it.getPropString("type") == "start" })
-                val startPos = tiledMapView["start"].firstOrNull?.pos ?: Point(50, 50)
-                val charactersLayer = tiledMapView["characters"].first as Container
-
-                println("charactersLayer before=$charactersLayer") // this is empty on load, but then populated by the npcs?
-
-                charactersLayer.keepChildrenSortedByY()
-
-                // here we are loading the NPCs for display, but they don't exist as independent objects within the game world
-                // can I add their game world properties to the npcs list?
-                for (npcObject in tiledMapView.tiledMap.data.getObjectByType("npc")) {
-                    val npcImageDV = charactersLayer.imageDataView(
-                        characters[npcObject.str("skin")],
-                        "down",
-                        playing = false,
-                        smoothing = false
-                    ) {
-                        xy(npcObject.x, npcObject.y)
-                    }
-                    npcsMap[npcObject.name] = NPC(npcImageDV,npcObject)
-                }
-                println("Loaded all npcs into npcsMap")
-                println(npcsMap)
-
-                player =
-                    charactersLayer.imageDataView(characters["vampire"], "right", playing = false, smoothing = false) {
-                        xy(startPos)
-                    }
-                println("charactersLayer after=$charactersLayer")
-            }
-
-            val textPos = Point(5.0, this.height-20.0)
-            val hintText = uiText("Press 'E' to interact").xy(textPos)
-
-            cameraContainer.cameraViewportBounds.copyFrom(tiledMapView.getLocalBoundsOptimized())
-
-            stage!!.controlWithKeyboard(player, tiledMapView, npcs = npcsMap.values.toList(), hintText, tiledMapView)
-
-            cameraContainer.follow(player, setImmediately = true)
-
-            //cameraContainer.tweenCamera(cameraContainer.getCameraRect(Rectangle(200, 200, 100, 100)))
-        }
+object MyModule : Module() {
+//    override val mainScene: KClass<out Scene> = MyScene1::class
+    override val size: SizeInt = SizeInt(800,600)
+    override val mainScene: KClass<out Scene> = RpgIngameScene::class
+    override suspend fun AsyncInjector.configure() {
+        mapInstance(SceneMap("BasicTilemap/untitled.tmx"))
+        mapPrototype { RpgIngameScene(SceneMap("BasicTilemap/untitled.tmx")) }
+        mapPrototype { DungeonScene(SceneMap("MiniTileset-Dungeon/dungeon.tmx")) }
     }
 }
+
+class SceneMap(val value: String)
 
 data class NPC(val imageDataView: ImageDataView, val obj: TiledMap.Object)
 
@@ -148,8 +64,10 @@ fun Stage.controlWithKeyboard(
     char: ImageDataView,
     collider: HitTestable,
     npcs: List<NPC> = emptyList(),
+    events: Map<String, TiledMap.Object>  = emptyMap(),
     messageBox: UIText,
     tiledMapView: TiledMapView,
+    sceneContainer: SceneContainer,
     up: Key = Key.UP, // don't bother with these until we have user-configurable keybindings
     right: Key = Key.RIGHT,
     down: Key = Key.DOWN,
@@ -195,7 +113,7 @@ fun Stage.controlWithKeyboard(
 
         // check for npc collisions
         val pressingInteract = keys[Key.E]
-        if(pressingInteract) {
+        if (pressingInteract) {
             for (npc in npcs) {
                 if (char.collidesWith(npc.imageDataView)) {
 //                    println("Collided with NPC $npc")
@@ -205,17 +123,63 @@ fun Stage.controlWithKeyboard(
                     }
                 }
             }
+
+            //Rectangle(x=352, y=224, width=34, height=31.3333)
+            for (event in events) {
+                val charRect = Rectangle(char.x, char.y, char.width, char.height)
+                val nextScenes = mapOf("dungeon" to DungeonScene::class, "untitled" to RpgIngameScene::class)
+                println("charRect: $charRect")
+                val eventRect = event.value.bounds
+                if (charRect.intersects(eventRect)) {
+                    println("Character intersects with event: ${event.key}")
+                    val nextScene: String? =  event.value.properties["nextScene"]?.string
+                    when(nextScene) {
+                        "dungeon" -> launchImmediately { sceneContainer.pushTo<DungeonScene>(
+                            transition = MaskTransition(
+                                transition = TransitionFilter.Transition.CIRCULAR,
+                                reversed = false,
+                                smooth = true,
+                                filtering = true
+                            ),
+                            time = 1.seconds)
+                        }
+                        "untitled" -> launchImmediately { sceneContainer.pushTo<RpgIngameScene>(
+                            transition = MaskTransition(
+                                transition = TransitionFilter.Transition.CIRCULAR,
+                                reversed = false,
+                                smooth = true,
+                                filtering = true
+                            ),
+                            time = 1.seconds)
+                        }
+                    }
+/*
+                    event.value.properties["nextScene"]?.also {
+                        val nextSceneClass: KClass<out Scene>? = nextScenes[it.string]
+                        launchImmediately { sceneContainer.changeTo<DungeonScene>(
+                            transition = MaskTransition(
+                                transition = TransitionFilter.Transition.CIRCULAR,
+                                reversed = false,
+                                smooth = true,
+                                filtering = true
+                        ),
+                        time = 1.seconds)
+                        }
+                    }
+*/
+                }
+            }
         }
 
         // there's a coordinate problem here I need to solve
         // this only returns the ID of the tile used, which doesn't say much at all
         val pressingInfo = keys[Key.I]
-        if(pressingInfo) {
+        if (pressingInfo) {
             val characterPos = char.pos
             println("Tile at [${characterPos.x},${characterPos.y}]")
-            if(charGridX >= 0 && charGridX >=0) {
-                for(layer in tiledMapView.tiledMap.data.tileLayers) {
-                    val currentTile = layer[charGridX,charGridY]
+            if (charGridX >= 0 && charGridX >= 0) {
+                for (layer in tiledMapView.tiledMap.data.tileLayers) {
+                    val currentTile = layer[charGridX, charGridY]
                     println("Tile at [${characterPos.x},${characterPos.y}] for layer ${layer.id}(${layer.name}) is: $currentTile")
                     println(tiledMapView.tiledMap.tilesets[0].data.tiles[currentTile].type)
                 }

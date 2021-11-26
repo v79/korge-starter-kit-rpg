@@ -137,7 +137,7 @@
  <objectgroup id="5" name="events">
   <object id="1" name="text" type="event" x="352" y="224" width="34" height="31.3333">
    <properties>
-    <property name="script" value="say(&quot;hello&quot;)"/>
+    <property name="nextScene" value="dungeon"/>
    </properties>
   </object>
   <object id="2" name="vamp2" type="npc" x="251.833" y="268.167">
